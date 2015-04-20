@@ -1,0 +1,28 @@
+{
+  "name": "jet_serializer",
+  "description": "Recursive serializer for javascript",
+  "homepage": "http://jet-serializer.github.io/",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/karma-runner/karma.git"
+  },
+  "keywords": [
+    "recursive",
+    "serialization",
+    "serializer",
+    "jet"
+  ],
+  "author": {
+    "name": "Andrii Muzalevskyi",
+    "email": "face2world@gmail.com"
+  },
+  "dependencies": {
+
+  },
+  "devDependencies": {
+    "karma": "~0.1.0"
+  },
+  "main": "./lib/jet_serializer",
+  "version": "0.1.0",
+  "license": "MIT"
+}
