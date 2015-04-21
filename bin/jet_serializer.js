@@ -44,14 +44,35 @@ module.exports = serializer = {
                 }
             }
         }, function (k, v) {
-            var className;
-            if (v && typeof v.$serialize === 'function') {
-                return v.$serialize();
-            }
-            if (className = serializer.registeredClassName(v)) {
-                var data = util._extend({}, v);
+            var className = serializer.registeredClassName(v);
+            if (className) {
+                var data = typeof v.toJSON === 'function' ? v.toJSON() : util._extend({}, v);
                 data.$className = className;
                 return data;
+            }
+            if (v) {
+                if (typeof v.toJSON === 'function') {
+                    return v.toJSON();
+                }
+                switch (Object.prototype.toString.call(v)) {
+                    case '[object Date]':
+                        return {
+                            $className: 'Date',
+                            value: v.toISOString()
+                        };
+                    case '[object RegExp]':
+                        return {
+                            $className: 'RegExp',
+                            source: v.source,
+                            flags: v.toString().match(/[gim]*$/)[0]
+                        };
+                    case '[object Error]':
+                        return {
+                            $className: 'Error',
+                            name: v.name,
+                            message: v.message
+                        };
+                }
             }
             return v;
         }, space);
@@ -65,7 +86,7 @@ module.exports = serializer = {
         me = first.$meta.serialize.me;
         duplicates = first.$meta.serialize.duplicates || [];
         function resolveRecursion(current, key, parent) {
-            var i, propName;
+            var i, propName, tmp;
             if (current && current.hasOwnProperty('$ref')) {
                 parent[key] = duplicates[current.$ref];
             } else {
@@ -76,16 +97,32 @@ module.exports = serializer = {
                 } else if (typeof current == 'object' && current !== null) {
                     if (current.$className) {
                         var className = current.$className,
-                            ctor = serializer.getConstructorByName(className);
+                            ctor;
                         delete current.$className;
-                        current = parent[key] = util._extend(Object.create(ctor.prototype, {
-                            constructor: {
-                                value: ctor,
-                                enumerable: false,
-                                writable: true,
-                                configurable: true
-                            }
-                        }), current);
+                        switch (className) {
+                            case 'Date':
+                                current = parent[key] = new Date(current.value);
+                                break;
+                            case 'RegExp':
+                                current = parent[key] = new RegExp(current.source, current.flags);
+                                break;
+                            case 'Error':
+                                tmp = new Error(current.message);
+                                tmp.name = current.name;
+                                current = parent[key] = tmp;
+                                break;
+                            default:
+                                ctor = serializer.getConstructorByName(className);
+                                current = parent[key] = util._extend(Object.create(ctor.prototype, {
+                                    constructor: {
+                                        value: ctor,
+                                        enumerable: false,
+                                        writable: true,
+                                        configurable: true
+                                    }
+                                }), current);
+                                break;
+                        }
                     }
                     for (propName in current) {
                         if (current.hasOwnProperty(propName)) {
